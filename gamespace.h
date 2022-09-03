@@ -1,0 +1,563 @@
+#include <MCUFRIEND_kbv.h>
+
+/* 
+ *  Defines the class with the state of the entire game
+ */
+
+#include "scores.h"
+
+class GameSpace {
+  private:
+    SpaceShip* enemies[MAX_ENEMIES_PER_ROW][MAX_ROWS];  // enemy ships
+    SpaceShip* player;  // player ship
+    Laser* Lasers[MAX_PLAYER_LASERS];  // player lasers
+    Laser* EnemyLasers[MAX_ENEMY_LASERS]; // enemy lasers
+    PowerUp *powerup; // Powerup sprite
+    Scores* score;
+    int level;  // current level
+    int active_enemies;  // amount of remaining enemies
+
+    // Agressiveness factors
+    int fire_chance;  // Percentage of how likely it is a spaceship will fire
+    int max_lasers;   // maximum of simultaneous enemy lasers
+    int speed;        // horizontal speed of the enemies
+
+    long last_fired;
+
+    MCUFRIEND_kbv tft;
+
+    bool powerup_showing; // whether or not powerup is showing
+    int active_powerup; //  Currently active powerup
+    long powerup_active_start = 0; //  Time when the powerup started
+    long powerup_visible_start = 0; // Time when the powerup is drawn
+
+    SpaceShip* get_nth_enemy(int n);
+    
+  public:
+    GameSpace(MCUFRIEND_kbv t);
+
+    // Movement functions
+    void hover_enemies();
+    void move_enemies();
+    void move_player(int direction);
+    void move_lasers();
+    
+    void set_xspeed();
+
+    // Behaviour changes
+    void anger_enemies();
+
+    // Firing of lasers
+    void enemy_fire();
+    void player_fire();
+
+    // Hit detection and end game detection
+    bool check_hits();
+    bool detect_playerdeath();
+    bool sprite_hit_by_laser(Sprite *enemy, Laser* laser);
+    bool all_enemies_dead() { return (active_enemies == 0 ); };
+    bool enemies_reached_base();
+    void advance_level();
+    void reset_level() { level = 1; fire_chance = 15; max_lasers = 1;};
+    void reset();
+    void game_over();
+
+    // Powerup handling
+    bool powerup_active() { return powerup_showing; };
+    void do_powerup();
+    void handle_powerup();
+    void execute_kill_powerup();
+    void execute_reset_powerup();
+    int current_powerup() { return active_powerup;};
+
+    // function to draw the hud
+    void draw_hud();
+};
+
+// Constructor - initialize all the elements of the board just once
+GameSpace::GameSpace(MCUFRIEND_kbv t) {
+  tft = t;
+  
+  // Initialize all enemy ships
+  for ( int row = 0; row < MAX_ROWS; row++ ) {
+    for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++) {
+      enemies[i][row] = new SpaceShip(tft);
+    }
+  }
+
+  // Define player ship
+  player = new SpaceShip(tft);
+  player -> set_player();
+
+  powerup = new PowerUp(tft);
+
+  // Define score tracking
+  score = new Scores();
+  
+  // Initialize all laser objects for enemies and player
+  for ( int i = 0; i < MAX_PLAYER_LASERS; i++ ) {
+    Laser* laser = new Laser(tft);
+    Lasers[i] = laser;
+  }
+
+  for ( int i = 0; i < MAX_ENEMY_LASERS; i++ ) {
+    Laser* laser = new Laser(tft);
+    laser -> set_enemy();
+    EnemyLasers[i] = laser;
+  }
+
+  active_powerup = NO_POWERUP;
+  powerup_showing = false;
+}
+
+void GameSpace::reset() {
+  tft.fillScreen(BLACK);
+
+  speed = NORMAL_SPEED;
+  // Set spaceships in start position
+  for ( int row = 0; row < MAX_ROWS; row++ ) {
+    for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++) {
+      enemies[i][row]->set_coordinates(i*WIDTH*2, row * WIDTH*2 + HUD_OFFSET);
+      enemies[i][row]->set_xspeed(speed);
+      enemies[i][row]->set_color(colors[row]);
+      enemies[i][row]->set_active();
+      enemies[i][row]->set_direction(1);
+      enemies[i][row]->move(VERTICAL); // Force complete redraw
+    }
+  } 
+
+  player -> set_coordinates(160-10, 240-HEIGHT);
+  player -> set_xspeed(10);
+  player -> set_color(WHITE);
+  player -> set_active();
+  player -> move(HORIZONTAL);
+  
+  // Register total nummer of alive enemies
+  active_enemies = MAX_ROWS * MAX_ENEMIES_PER_ROW;
+
+  // Turn of all lasers
+  for ( int i = 0; i < MAX_PLAYER_LASERS; i++ ) {
+    Lasers[i] -> deactivate();
+    Lasers[i] -> set_width(NORMAL_LASER_WIDTH);
+  }
+
+  for ( int i = 0; i < MAX_ENEMY_LASERS; i++ ) {
+    EnemyLasers[i] -> deactivate();
+    EnemyLasers[i] -> set_width(NORMAL_LASER_WIDTH);
+  }
+
+  // turn off powerup
+  powerup -> deactivate();
+  active_powerup = NO_POWERUP;
+
+  last_fired = 0;
+}
+
+void GameSpace::hover_enemies() {
+  for ( int row = 0; row < MAX_ROWS; row++) {
+    for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++ ) {
+      enemies[i][row] -> hover();
+    }
+  }
+}
+
+void GameSpace::move_enemies() {
+  // Boundary check calculation to see if the enemies should change direction
+  int lowest_x = tft.width();
+  int highest_x = 0;
+  
+  for ( int row = 0; row < MAX_ROWS; row++) {
+    for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++ ) {
+      enemies[i][row] -> move(HORIZONTAL);
+      if (!(enemies[i][row] -> is_inactive())) {
+        lowest_x = min(lowest_x, enemies[i][row]->posx());
+        highest_x = max(highest_x, enemies[i][row]->posx());
+      }
+    }
+  }
+
+  // Should change direction?
+  if (lowest_x <= 0 || highest_x + WIDTH >= tft.width() ) {
+    for ( int row = 0; row < MAX_ROWS; row++) {
+      for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++ ) {
+        enemies[i][row] -> change_direction();
+        enemies[i][row] -> move(VERTICAL);
+      }
+    }
+  }
+}
+
+void GameSpace::set_xspeed() {
+  for ( int row = 0; row < MAX_ROWS; row++) {
+    for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++ ) {
+      enemies[i][row]->set_xspeed(speed);
+    }
+  }  
+}
+
+void GameSpace::anger_enemies() {
+  speed = NORMAL_SPEED;
+  int c = MAX_ROWS * MAX_ENEMIES_PER_ROW - active_enemies;
+
+  if ( c > MAX_ROWS * MAX_ENEMIES_PER_ROW /4 ) speed = AGITATED_SPEED;
+  if ( c > MAX_ROWS * MAX_ENEMIES_PER_ROW  * 3 /4 ) speed = ANGRY_SPEED;
+
+  set_xspeed();
+}
+
+bool GameSpace::sprite_hit_by_laser(Sprite *enemy, Laser* laser) {
+  if (  laser->posx() + laser->get_laser_width() > enemy -> posx() &&
+        laser->posx() < enemy->posx() + WIDTH)
+
+        if (!( laser->posy() + HEIGHT < enemy -> posy()) &&
+            !( laser->posy() > enemy -> posy() + HEIGHT))
+              return true;
+        
+        
+  /*// Coming from below
+  if (laser->posx()>=enemy->posx() && laser->posx() < enemy->posx() + WIDTH) {
+    if (laser->posy()<enemy->posy()+HEIGHT && laser->posy() >= enemy->posy()) {
+      return true;
+    }
+  }
+
+  // Coming from above
+  if (laser->posx()>=enemy->posx() && laser->posx() < enemy->posx() + WIDTH) {
+    if (laser->posy() + HEIGHT > enemy->posy() && laser->posy() + HEIGHT < enemy->posy() + HEIGHT) {
+      return true;
+    }
+  }
+  */
+  return false;
+}
+
+bool GameSpace::check_hits() {
+  bool hit = false;
+ 
+  for ( int i = 0; i < MAX_PLAYER_LASERS; i++) {
+    Laser* laser = Lasers[i];
+    if (laser -> is_inactive()) {
+      continue;
+    }
+
+    for ( int row = 0; row < MAX_ROWS; row++) {
+      for (int i =0 ; i < MAX_ENEMIES_PER_ROW; i++ ) {
+        SpaceShip *enemy = enemies[i][row];
+        if (enemy -> is_inactive()) {
+          continue;
+        }
+        if (sprite_hit_by_laser(enemy,laser) ) {
+            enemy -> deactivate();
+            laser -> deactivate();  
+            hit = true;
+            active_enemies--;
+          }
+        }
+      }
+    }
+  return hit;
+}
+
+SpaceShip* GameSpace::get_nth_enemy(int n) {
+  int counter = 0;
+  for ( int row = 0; row < MAX_ROWS; row++) {
+    for ( int i=0; i< MAX_ENEMIES_PER_ROW; i++) {
+      SpaceShip *enemy = enemies[i][row];
+      if (enemy -> is_inactive()) {
+        continue; 
+      }
+
+      if ( counter != n ) {
+        counter++;
+        continue;
+      }
+
+      return enemy;
+    }
+  }
+}
+
+void GameSpace::enemy_fire() {
+  int chance = random(0,100);
+
+  if ( chance <= fire_chance ) {
+    int enemy_to_fire = random(0, active_enemies); // FIXME off by one?
+    SpaceShip* enemy = get_nth_enemy(enemy_to_fire);
+
+    // Find an empty laser slot
+    for (int i = 0; i < max_lasers; i++ ) {
+      if ( EnemyLasers[i]->is_inactive()) {
+        EnemyLasers[i] -> fire(enemy->posx() + WIDTH/2, enemy->posy() + HEIGHT);
+        return;
+      }
+    }
+  }
+}
+
+void GameSpace::move_lasers() {
+  for (int l = 0; l < MAX_PLAYER_LASERS; l++ ) {
+      if (!(Lasers[l] -> is_inactive() )) {
+        Lasers[l] -> move(VERTICAL);
+      }
+    }
+
+   for (int l = 0; l < MAX_ENEMY_LASERS; l++ ) {
+     if (!(EnemyLasers[l] -> is_inactive() )) {
+       EnemyLasers[l] -> move(VERTICAL);
+     }
+  }
+}
+
+void GameSpace::player_fire() {
+  long now = millis();
+
+  int delay = 500;
+  if ( active_powerup==RAPID_FIRE_POWERUP ) {
+    delay = 30;
+  }
+
+  if (now - last_fired < delay )
+    return;
+  
+  for (int i = 0; i < MAX_PLAYER_LASERS; i++ ) {
+    if ( Lasers[i]->is_inactive()) {
+      Lasers[i] -> fire(player->posx() + WIDTH/2, player->posy() - HEIGHT);
+      last_fired = millis();
+      return;
+    }
+  }
+}
+
+bool GameSpace::detect_playerdeath() {
+  for (int i = 0; i< MAX_ENEMY_LASERS; i++) {
+    if (EnemyLasers[i] -> is_inactive()) {
+      continue;
+    }
+    if (sprite_hit_by_laser(player, EnemyLasers[i])) {
+      return true; 
+    }
+  }
+  return false;
+}
+
+bool GameSpace::enemies_reached_base() {
+  // BASE level is height of our character
+  // i.e. tft.height() - HEIGHT
+
+  int height = 0;
+  // Calculate lowest pixel line
+  for ( int row = 0; row < MAX_ROWS; row++) {
+    for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++ ) {
+      height = max(height, enemies[i][row]->posy() + HEIGHT);
+    }
+  }
+
+  if (height > tft.height() - HEIGHT)
+    return true;
+  
+  return false;
+}
+
+void GameSpace::advance_level() {
+  draw_hud();
+  tft.fillRect(0,HUD_OFFSET, tft.width(), tft.height(), GREEN);
+
+  char buffer[128];
+  tft.setTextSize(3);
+  tft.setCursor(0, tft.height()/3);
+  tft.setTextColor(BLACK);
+  sprintf(buffer, "Prepare for level %d!", level+1);
+  tft.print(buffer);
+
+  delay(2000);
+  tft.fillScreen(BLACK);
+  reset();
+
+  level += 1;
+  fire_chance += 5;
+  if (max_lasers < MAX_ENEMY_LASERS) 
+    max_lasers += 1;
+}
+
+void GameSpace::game_over() {
+  draw_hud();
+  tft.fillRect(0,HUD_OFFSET, tft.width(), tft.height(), RED);
+
+  char buffer[128];
+  tft.setTextSize(3);
+  tft.setCursor(0, tft.height()/3);
+  tft.setTextColor(BLACK);
+
+  if ( level > score -> get_highscore()) {
+    score -> set_highscore(level);
+    sprintf(buffer, "Game Over!\n\nNew highscore: %d", level);
+  } else {
+    sprintf(buffer, "Game Over!");
+  }
+
+  tft.print(buffer);
+  
+  delay(2000);
+  tft.fillScreen(BLACK);
+  reset();
+  reset_level();
+}
+
+void GameSpace::draw_hud() {
+  // Alive and level
+
+  char buffer[128];
+  if (active_powerup != NO_POWERUP) {
+    sprintf(buffer, "Level: %d  Enemies: %d High Score: %d, %s", level, active_enemies, score->get_highscore(), powerup->get_powerup_label());
+  } else {
+    sprintf(buffer, "Level: %d  Enemies: %d High Score: %d", level, active_enemies, score->get_highscore());
+  }
+
+  tft.fillRect(0,0, tft.width(), HUD_OFFSET, BLACK);
+  //tft.drawFastHLine(0, 16, tft.width(), MAGENTA);
+
+  tft.setTextSize(1);
+  tft.setCursor(0, 4);
+  tft.setTextColor(WHITE);
+  tft.print(buffer);
+  
+}
+
+void GameSpace::move_player(int direction) {
+  player -> set_direction(direction);
+
+  if (direction < 0 && player->posx() >0 )
+    player -> move(HORIZONTAL);
+  if (direction > 0 && player->posx() + WIDTH < tft.width())
+    player -> move(HORIZONTAL);
+}
+
+void GameSpace::handle_powerup() {
+  switch (active_powerup) {
+    case(NO_POWERUP):
+      return;
+      break;
+    case(KILL_POWERUP):
+      execute_kill_powerup();
+      active_powerup = NO_POWERUP;
+      draw_hud();
+      break;
+    case(RESET_POWERUP):
+      execute_reset_powerup();
+      active_powerup = NO_POWERUP;
+      draw_hud();
+      break;
+    case(HOVER_POWERUP):
+      if (millis() - powerup_active_start > POWERUP_DURATION) {
+        active_powerup = NO_POWERUP;
+        draw_hud();
+      }
+      break;
+    case(STOP_FIRING_POWERUP):
+      if (millis() - powerup_active_start > POWERUP_DURATION) {
+        active_powerup = NO_POWERUP;
+        draw_hud();
+      }
+      break;
+    case(RAPID_FIRE_POWERUP):
+      if (millis() - powerup_active_start > POWERUP_DURATION) {
+        active_powerup = NO_POWERUP;
+        draw_hud();
+      }
+      break;
+    case(WIDE_LASER_POWERUP):
+      for ( int i = 0; i < MAX_PLAYER_LASERS; i++ ) {
+        Lasers[i] -> set_width(POWERUP_LASER_WIDTH);
+      }
+      if (millis() - powerup_active_start > POWERUP_DURATION) {
+        active_powerup = NO_POWERUP;
+        for ( int i = 0; i < MAX_PLAYER_LASERS; i++ ) {
+          Lasers[i] -> deactivate();
+          Lasers[i] -> set_width(NORMAL_LASER_WIDTH);
+        }
+        draw_hud();
+      }
+      break;
+    default:
+      active_powerup = NO_POWERUP;
+  }  
+}
+
+void GameSpace::execute_kill_powerup() {
+  int amount = 1;
+  if ( active_enemies > 2 ) {
+    amount = floor(active_enemies/2);
+  }
+
+  for ( int i = 0; i < amount; i++) {
+    SpaceShip* enemy = get_nth_enemy(random(0, active_enemies));
+    enemy -> deactivate();
+    active_enemies--;
+  }
+}
+
+void GameSpace::execute_reset_powerup() {
+  tft.fillRect(0, HUD_OFFSET, tft.width(), tft.height() - HEIGHT - HUD_OFFSET, BLACK);
+  
+  for ( int row = 0; row < MAX_ROWS; row++ ) {
+    for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++) {
+      enemies[i][row]->set_coordinates(i*WIDTH*2, row * WIDTH*2 + HUD_OFFSET);
+      enemies[i][row]->set_xspeed(NORMAL_SPEED);
+      enemies[i][row]->set_color(colors[row]);
+      enemies[i][row]->set_direction(1);
+      enemies[i][row]->move(VERTICAL);
+    }
+  }
+}
+
+void GameSpace::do_powerup() {
+  if ( powerup_showing ) {
+    // Has the powerup been up too long
+    if ( millis() - powerup_visible_start > POWERUP_VISIBLE_DURATION ) {
+      powerup -> deactivate();
+      powerup_showing = false;
+      draw_hud();
+      return;
+    }
+    // Has the powerup been hit
+    for ( int i = 0; i < MAX_PLAYER_LASERS; i++) {
+      Laser* laser = Lasers[i];
+      if (laser -> is_inactive()) {
+        continue; 
+      }
+      if ( sprite_hit_by_laser(powerup, laser)) {
+          powerup -> deactivate();
+          laser -> deactivate();
+          powerup_showing = false;
+          
+          powerup_active_start = millis();
+          active_powerup = powerup->get_powerup_type();
+          draw_hud();
+      }
+    }
+  } else {
+    if (active_powerup == NO_POWERUP) {
+      // don't generate powerups unless upper row is cleared
+      int ypos = 0;
+      for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++ ) {
+        ypos = max(ypos, enemies[i][0]->posy());
+      }
+      if ( ypos < HUD_OFFSET + 2 * HEIGHT)
+        return;
+      
+      // do a chance game to see if we need to draw
+      int percent = 1;
+      if ( random(0,100) < percent ) {
+        powerup_visible_start = millis();
+        powerup -> set_color(WHITE);
+        powerup -> set_xspeed(0);
+        powerup -> activate();
+        powerup -> set_coordinates(random(WIDTH, tft.width() - WIDTH), HUD_OFFSET + HEIGHT);
+        powerup -> draw();
+        powerup_showing = true;
+    
+        draw_hud();
+      }
+    }
+  }
+}
