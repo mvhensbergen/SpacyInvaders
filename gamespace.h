@@ -214,22 +214,6 @@ bool GameSpace::sprite_hit_by_laser(Sprite *enemy, Laser* laser) {
         if (!( laser->posy() + HEIGHT < enemy -> posy()) &&
             !( laser->posy() > enemy -> posy() + HEIGHT))
               return true;
-        
-        
-  /*// Coming from below
-  if (laser->posx()>=enemy->posx() && laser->posx() < enemy->posx() + WIDTH) {
-    if (laser->posy()<enemy->posy()+HEIGHT && laser->posy() >= enemy->posy()) {
-      return true;
-    }
-  }
-
-  // Coming from above
-  if (laser->posx()>=enemy->posx() && laser->posx() < enemy->posx() + WIDTH) {
-    if (laser->posy() + HEIGHT > enemy->posy() && laser->posy() + HEIGHT < enemy->posy() + HEIGHT) {
-      return true;
-    }
-  }
-  */
   return false;
 }
 
