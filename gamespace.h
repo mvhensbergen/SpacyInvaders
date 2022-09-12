@@ -17,6 +17,8 @@ class GameSpace {
     int level;  // current level
     int active_enemies;  // amount of remaining enemies
 
+    char textbuffer[128];
+
     // Agressiveness factors
     int fire_chance;  // Percentage of how likely it is a spaceship will fire
     int max_lasers;   // maximum of simultaneous enemy lasers
@@ -362,12 +364,11 @@ void GameSpace::advance_level() {
   draw_hud();
   tft.fillRect(0,HUD_OFFSET, tft.width(), tft.height(), GREEN);
 
-  char buffer[128];
   tft.setTextSize(3);
   tft.setCursor(0, tft.height()/3);
   tft.setTextColor(BLACK);
-  sprintf(buffer, "Prepare for level %d!", level+1);
-  tft.print(buffer);
+  sprintf(textbuffer, "Prepare for\n\nlevel %d!", level+1);
+  tft.print(textbuffer);
 
   delay(2000);
   tft.fillScreen(BLACK);
@@ -383,19 +384,18 @@ void GameSpace::game_over() {
   draw_hud();
   tft.fillRect(0,HUD_OFFSET, tft.width(), tft.height(), RED);
 
-  char buffer[128];
   tft.setTextSize(3);
   tft.setCursor(0, tft.height()/3);
   tft.setTextColor(BLACK);
 
   if ( level > score -> get_highscore()) {
     score -> set_highscore(level);
-    sprintf(buffer, "Game Over!\n\nNew highscore: %d", level);
+    sprintf(textbuffer, "Game Over!\n\nNew highscore: %d", level);
   } else {
-    sprintf(buffer, "Game Over!");
+    sprintf(textbuffer, "Game Over!");
   }
 
-  tft.print(buffer);
+  tft.print(textbuffer);
   
   delay(2000);
   tft.fillScreen(BLACK);
@@ -406,11 +406,10 @@ void GameSpace::game_over() {
 void GameSpace::draw_hud() {
   // Alive and level
 
-  char buffer[128];
   if (active_powerup != NO_POWERUP) {
-    sprintf(buffer, "Level: %d  Enemies: %d High Score: %d, %s", level, active_enemies, score->get_highscore(), powerup->get_powerup_label());
+    sprintf(textbuffer, "Level: %d  Enemies: %d High Score: %d, %s", level, active_enemies, score->get_highscore(), powerup->get_powerup_label());
   } else {
-    sprintf(buffer, "Level: %d  Enemies: %d High Score: %d", level, active_enemies, score->get_highscore());
+    sprintf(textbuffer, "Level: %d  Enemies: %d High Score: %d", level, active_enemies, score->get_highscore());
   }
 
   tft.fillRect(0,0, tft.width(), HUD_OFFSET, BLACK);
@@ -419,7 +418,7 @@ void GameSpace::draw_hud() {
   tft.setTextSize(1);
   tft.setCursor(0, 4);
   tft.setTextColor(WHITE);
-  tft.print(buffer);
+  tft.print(textbuffer);
   
 }
 

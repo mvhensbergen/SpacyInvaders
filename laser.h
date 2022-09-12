@@ -12,6 +12,17 @@ class Laser : public Sprite {
     int yspeed;
     bool enemy = false;
     int laser_width;
+
+    int get_laser_color() {
+      int color;
+      if (!enemy) {
+        color = colors[random(0, 6)];
+      } else {
+        color = MAGENTA;
+      }
+      return color;
+    }
+
   public:
     Laser(MCUFRIEND_kbv t) : Sprite(t) 
       { 
@@ -37,13 +48,6 @@ class Laser : public Sprite {
 void Laser::move(int direction=VERTICAL) {
   if (inactive) return;
 
-  int color;
-  if (!enemy) {
-    color = colors[random(0, 6)];
-  } else {
-    color = MAGENTA;
-  }
-
   // Remove old position
   // tft.drawFastVLine(x,y , HEIGHT, BLACK);
   tft.fillRect(x,y, laser_width, HEIGHT, BLACK);
@@ -55,8 +59,8 @@ void Laser::move(int direction=VERTICAL) {
     return;
   }
 
+  int color = get_laser_color();
   tft.fillRect(x,y, laser_width, HEIGHT, color);
- // tft.drawFastVLine(x,y, HEIGHT, color);
 }
 
 
