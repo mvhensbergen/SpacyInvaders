@@ -12,6 +12,8 @@
 #include "powerup.h"
 #include "gamespace.h"
 
+#include "scores.h"
+
 // Touch screen pressure threshold
 #define MINPRESSURE 0
 #define MAXPRESSURE 1000
@@ -35,6 +37,9 @@ const TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 #include <MCUFRIEND_kbv.h>
 MCUFRIEND_kbv tft;
 
+// Set to 1 to reset highscore
+#define CLEAR 0
+
 void setup(void) {
   Serial.begin(9600);
   Serial.println(F("TFT LCD test"));
@@ -49,6 +54,11 @@ void setup(void) {
   tft.setRotation(3);
 
   tft.fillScreen(BLACK);
+
+  if (CLEAR) {
+    Scores s;
+    s.set_highscore(0);
+  }
 }
 
 #define PLAYER_FIRE 0
