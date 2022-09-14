@@ -27,9 +27,11 @@
 #define AGITATED_SPEED 4
 #define ANGRY_SPEED 6
 
-//#define POWERUP_RADIUS 6
 #define POWERUP_DURATION 5000
 #define POWERUP_VISIBLE_DURATION 5000
+
+// Delay in milliseconds for level cleared or game over screen
+#define PAUSE 2000
 
 #define NO_POWERUP -1
 // Enemies stand still for a period of time (but still fire)
@@ -44,6 +46,8 @@
 #define RAPID_FIRE_POWERUP 4
 // Player laser widens
 #define WIDE_LASER_POWERUP 5
+
+#define MAX_POWERUPS 6
 
 
 const char* powerups[7] = { "HOVER", "RESET", "KILL", "NO FIRE", "RAPID FIRE", "WIDE LASER"}; 

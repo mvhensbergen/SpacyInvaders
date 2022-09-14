@@ -20,7 +20,7 @@ class PowerUp: public Sprite {
 void PowerUp::activate() {
   inactive = false;
 
-  int r = random(0, 6); // CHECK OUTPUT FIXME ugly 5
+  int r = random(0, MAX_POWERUPS);
 
   powerup_type = r;
   set_color(colors[r]);

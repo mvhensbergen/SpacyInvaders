@@ -51,7 +51,7 @@ void setup(void) {
 
   tft.begin(identifier);
 
-  tft.setRotation(3);
+  tft.setRotation(1); // Turn the display 270 degrees
 
   tft.fillScreen(BLACK);
 
@@ -66,20 +66,21 @@ void setup(void) {
 #define PLAYER_RIGHT 2
 #define NO_ACTION 3
 
+// Read touch display input
 int read_input() {
   TSPoint tp = ts.getPoint();
 
-  pinMode(XM, OUTPUT); // FIXME understand this
+  pinMode(XM, OUTPUT);
   pinMode(YP, OUTPUT);
 
   if (tp.z > MINPRESSURE) {
-    int ypos = map(tp.x, TS_RT, TS_LEFT, 0, tft.height()); // FIXME understand this
+    int ypos = map(tp.x, TS_RT, TS_LEFT, 0, tft.height());
     int xpos = map(tp.y, TS_BOT, TS_TOP, 0, tft.width());
 
     if ( ypos < tft.height() /2 ) {
       return PLAYER_FIRE;    
     } else {
-      if (xpos > tft.width()/2 ) {
+      if (xpos < tft.width()/2 ) {
        return PLAYER_RIGHT;
       } else {
         return PLAYER_LEFT;
@@ -90,15 +91,16 @@ int read_input() {
 }
 
 void loop(void) {
+  // Initialize the game
   GameSpace g = GameSpace(tft);
+
+  // bookkeeping to reset everything to start position
   g.reset_level();
-  g.reset();
+  g.reset_state();
   g.draw_hud();
 
   bool should_redraw_hud = false;
   bool game_over = false;
-
-  int iter = 0;
 
   while (true) {
     should_redraw_hud = false;
@@ -109,9 +111,10 @@ void loop(void) {
     
     // If a powerup is in progress, handle it
     if ( g.current_powerup() != NO_POWERUP) {
-      g.handle_powerup();
+      g.handle_active_powerup();
     }
-    
+
+    // move enemies unless HOVER_POWERUP is active
     if ( g.current_powerup() == HOVER_POWERUP) {
       g.hover_enemies();
     } else {
@@ -135,7 +138,7 @@ void loop(void) {
     // move lasers
     g.move_lasers();    
 
-    // Enemy fire chance
+    // Enemy fire chance unless STOP_FIRING powerup is active
     if (g.current_powerup() != STOP_FIRING_POWERUP)
       g.enemy_fire();
      

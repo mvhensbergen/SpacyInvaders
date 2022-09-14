@@ -17,23 +17,43 @@ class GameSpace {
     int level;  // current level
     int active_enemies;  // amount of remaining enemies
 
-    char textbuffer[128];
+    char textbuffer[128];  // buffer to render text in
 
     // Agressiveness factors
     int fire_chance;  // Percentage of how likely it is a spaceship will fire
     int max_lasers;   // maximum of simultaneous enemy lasers
     int speed;        // horizontal speed of the enemies
 
+    // used for delaying the fire rate a bit
     long last_fired;
 
+    // the tft screen class
     MCUFRIEND_kbv tft;
 
+    // powerup handler
     bool powerup_showing; // whether or not powerup is showing
     int active_powerup; //  Currently active powerup
     long powerup_active_start = 0; //  Time when the powerup started
     long powerup_visible_start = 0; // Time when the powerup is drawn
 
+    // get the nth active enemy counted from top left
     SpaceShip* get_nth_enemy(int n);
+
+    void enemies_in_start_position(bool set_active) {
+      speed = NORMAL_SPEED;
+      for ( int row = 0; row < MAX_ROWS; row++ ) {
+        for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++) {
+          enemies[i][row]->set_coordinates(i*WIDTH*2, row * WIDTH*2 + HUD_OFFSET);
+          enemies[i][row]->set_xspeed(speed);
+          enemies[i][row]->set_color(colors[row]);
+          enemies[i][row]->set_direction(1);
+
+          if (set_active)
+            enemies[i][row]->set_active();
+          enemies[i][row]->move(VERTICAL); // Force complete redraw
+        }
+      }      
+    }
     
   public:
     GameSpace(MCUFRIEND_kbv t);
@@ -53,7 +73,7 @@ class GameSpace {
     void enemy_fire();
     void player_fire();
 
-    // Hit detection and end game detection
+    // Hit detection and end game end detection
     bool check_hits();
     bool detect_playerdeath();
     bool sprite_hit_by_laser(Sprite *enemy, Laser* laser);
@@ -61,13 +81,13 @@ class GameSpace {
     bool enemies_reached_base();
     void advance_level();
     void reset_level() { level = 1; fire_chance = 15; max_lasers = 1;};
-    void reset();
+    void reset_state();
     void game_over();
 
     // Powerup handling
     bool powerup_active() { return powerup_showing; };
     void do_powerup();
-    void handle_powerup();
+    void handle_active_powerup();
     void execute_kill_powerup();
     void execute_reset_powerup();
     int current_powerup() { return active_powerup;};
@@ -112,21 +132,11 @@ GameSpace::GameSpace(MCUFRIEND_kbv t) {
   powerup_showing = false;
 }
 
-void GameSpace::reset() {
+void GameSpace::reset_state() {
   tft.fillScreen(BLACK);
 
-  speed = NORMAL_SPEED;
   // Set spaceships in start position
-  for ( int row = 0; row < MAX_ROWS; row++ ) {
-    for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++) {
-      enemies[i][row]->set_coordinates(i*WIDTH*2, row * WIDTH*2 + HUD_OFFSET);
-      enemies[i][row]->set_xspeed(speed);
-      enemies[i][row]->set_color(colors[row]);
-      enemies[i][row]->set_active();
-      enemies[i][row]->set_direction(1);
-      enemies[i][row]->move(VERTICAL); // Force complete redraw
-    }
-  } 
+  enemies_in_start_position(true);
 
   player -> set_coordinates(160-10, 240-HEIGHT);
   player -> set_xspeed(10);
@@ -155,6 +165,7 @@ void GameSpace::reset() {
   last_fired = 0;
 }
 
+// Do a 'fake' draw operation to remain constant drawing speed
 void GameSpace::hover_enemies() {
   for ( int row = 0; row < MAX_ROWS; row++) {
     for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++ ) {
@@ -163,6 +174,7 @@ void GameSpace::hover_enemies() {
   }
 }
 
+// Move enemies sideways and vertically when boundaries of screen have been reached
 void GameSpace::move_enemies() {
   // Boundary check calculation to see if the enemies should change direction
   int lowest_x = tft.width();
@@ -189,6 +201,7 @@ void GameSpace::move_enemies() {
   }
 }
 
+// change the horizontal speed of all enemies
 void GameSpace::set_xspeed() {
   for ( int row = 0; row < MAX_ROWS; row++) {
     for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++ ) {
@@ -197,6 +210,7 @@ void GameSpace::set_xspeed() {
   }  
 }
 
+// make the enemies move faster if more get eliminated
 void GameSpace::anger_enemies() {
   speed = NORMAL_SPEED;
   int c = MAX_ROWS * MAX_ENEMIES_PER_ROW - active_enemies;
@@ -207,6 +221,8 @@ void GameSpace::anger_enemies() {
   set_xspeed();
 }
 
+// Check is a sprite is hit by a laser
+// A sprite is already regarded as a rectangle even though the actual sprite may look different
 bool GameSpace::sprite_hit_by_laser(Sprite *enemy, Laser* laser) {
   if (  laser->posx() + laser->get_laser_width() > enemy -> posx() &&
         laser->posx() < enemy->posx() + WIDTH)
@@ -217,6 +233,7 @@ bool GameSpace::sprite_hit_by_laser(Sprite *enemy, Laser* laser) {
   return false;
 }
 
+// Check if player laser hits an enemy
 bool GameSpace::check_hits() {
   bool hit = false;
  
@@ -244,6 +261,8 @@ bool GameSpace::check_hits() {
   return hit;
 }
 
+
+// Get nth active enemy counted from top left
 SpaceShip* GameSpace::get_nth_enemy(int n) {
   int counter = 0;
   for ( int row = 0; row < MAX_ROWS; row++) {
@@ -263,14 +282,16 @@ SpaceShip* GameSpace::get_nth_enemy(int n) {
   }
 }
 
+// Select a random enemy to fire based on chance
+// There must be an inactive laser slot available to shoot
 void GameSpace::enemy_fire() {
   int chance = random(0,100);
 
   if ( chance <= fire_chance ) {
-    int enemy_to_fire = random(0, active_enemies); // FIXME off by one?
+    int enemy_to_fire = random(0, active_enemies);
     SpaceShip* enemy = get_nth_enemy(enemy_to_fire);
 
-    // Find an empty laser slot
+    // Find an available laser slot
     for (int i = 0; i < max_lasers; i++ ) {
       if ( EnemyLasers[i]->is_inactive()) {
         EnemyLasers[i] -> fire(enemy->posx() + WIDTH/2, enemy->posy() + HEIGHT);
@@ -280,6 +301,7 @@ void GameSpace::enemy_fire() {
   }
 }
 
+// Move enemy and player lasers
 void GameSpace::move_lasers() {
   for (int l = 0; l < MAX_PLAYER_LASERS; l++ ) {
       if (!(Lasers[l] -> is_inactive() )) {
@@ -294,6 +316,8 @@ void GameSpace::move_lasers() {
   }
 }
 
+// Fire a player laser from the players position
+// there is a small delay in firing which is lowered given the RAPID FIRE powerup
 void GameSpace::player_fire() {
   long now = millis();
 
@@ -314,6 +338,7 @@ void GameSpace::player_fire() {
   }
 }
 
+// See if the player got hit by an enemy lser
 bool GameSpace::detect_playerdeath() {
   for (int i = 0; i< MAX_ENEMY_LASERS; i++) {
     if (EnemyLasers[i] -> is_inactive()) {
@@ -326,10 +351,8 @@ bool GameSpace::detect_playerdeath() {
   return false;
 }
 
+// Check if the enemies reached the bottom row
 bool GameSpace::enemies_reached_base() {
-  // BASE level is height of our character
-  // i.e. tft.height() - HEIGHT
-
   int height = 0;
   // Calculate lowest pixel line
   for ( int row = 0; row < MAX_ROWS; row++) {
@@ -344,6 +367,9 @@ bool GameSpace::enemies_reached_base() {
   return false;
 }
 
+
+// Draw the screen green and pause for a little while
+// Then increase difficulty
 void GameSpace::advance_level() {
   draw_hud();
   tft.fillRect(0,HUD_OFFSET, tft.width(), tft.height(), GREEN);
@@ -354,16 +380,18 @@ void GameSpace::advance_level() {
   sprintf(textbuffer, "Prepare for\n\nlevel %d!", level+1);
   tft.print(textbuffer);
 
-  delay(2000);
+  delay(PAUSE);
   tft.fillScreen(BLACK);
-  reset();
+  reset_state();
 
+  // increase difficulty
   level += 1;
   fire_chance += 5;
   if (max_lasers < MAX_ENEMY_LASERS) 
     max_lasers += 1;
 }
 
+// Game over
 void GameSpace::game_over() {
   draw_hud();
   tft.fillRect(0,HUD_OFFSET, tft.width(), tft.height(), RED);
@@ -381,12 +409,13 @@ void GameSpace::game_over() {
 
   tft.print(textbuffer);
   
-  delay(2000);
+  delay(PAUSE);
   tft.fillScreen(BLACK);
-  reset();
+  reset_state();
   reset_level();
 }
 
+// Draw the stats of the game
 void GameSpace::draw_hud() {
   // Alive and level
 
@@ -397,7 +426,6 @@ void GameSpace::draw_hud() {
   }
 
   tft.fillRect(0,0, tft.width(), HUD_OFFSET, BLACK);
-  //tft.drawFastHLine(0, 16, tft.width(), MAGENTA);
 
   tft.setTextSize(1);
   tft.setCursor(0, 4);
@@ -415,7 +443,7 @@ void GameSpace::move_player(int direction) {
     player -> move(HORIZONTAL);
 }
 
-void GameSpace::handle_powerup() {
+void GameSpace::handle_active_powerup() {
   switch (active_powerup) {
     case(NO_POWERUP):
       return;
@@ -481,16 +509,8 @@ void GameSpace::execute_kill_powerup() {
 
 void GameSpace::execute_reset_powerup() {
   tft.fillRect(0, HUD_OFFSET, tft.width(), tft.height() - HEIGHT - HUD_OFFSET, BLACK);
-  
-  for ( int row = 0; row < MAX_ROWS; row++ ) {
-    for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++) {
-      enemies[i][row]->set_coordinates(i*WIDTH*2, row * WIDTH*2 + HUD_OFFSET);
-      enemies[i][row]->set_xspeed(NORMAL_SPEED);
-      enemies[i][row]->set_color(colors[row]);
-      enemies[i][row]->set_direction(1);
-      enemies[i][row]->move(VERTICAL);
-    }
-  }
+
+  enemies_in_start_position(false);
 }
 
 void GameSpace::do_powerup() {
