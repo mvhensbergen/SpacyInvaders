@@ -24,8 +24,8 @@ class Laser : public Sprite {
     }
 
   public:
-    Laser(MCUFRIEND_kbv t) : Sprite(t) 
-      { 
+    Laser(MCUFRIEND_kbv t) : Sprite(t)
+      {
          yspeed = 10;
          ydirection = -1;
          inactive = true;

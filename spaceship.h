@@ -12,10 +12,10 @@ class SpaceShip: public Sprite {
   public:
     SpaceShip(MCUFRIEND_kbv t) : Sprite(t) { xdirection=1; ydirection = 1; yspeed=SPACESHIP_VERTICAL_SPEED; };
     void set_player() { is_player = true; };
-    
+
     void change_direction() { xdirection = -xdirection;};
     void set_direction(int direction) { xdirection = direction; };
-  
+
     void deactivate();
     void hover();
     void move(int direction);
@@ -32,7 +32,7 @@ void SpaceShip::hover() {
 }
 
 void SpaceShip::move(int direction) {
-  if (inactive) { 
+  if (inactive) {
     // Do 2 bogus draw operations to remain constant drawing time
     tft.fillRect(tft.width()-WIDTH,0,WIDTH, HEIGHT, BLACK);
     tft.fillRect(tft.width()-WIDTH,0,WIDTH, HEIGHT, BLACK);
@@ -68,7 +68,7 @@ void SpaceShip::move(int direction) {
     if (direction == HORIZONTAL ) {
        tft.fillTriangle(x,y+HEIGHT, x+WIDTH, y+HEIGHT, x + WIDTH/2, y, BLACK);
        x += xdirection * xspeed;
-       tft.fillTriangle(x,y+HEIGHT, x+WIDTH, y+HEIGHT, x + WIDTH/2, y, color); 
+       tft.fillTriangle(x,y+HEIGHT, x+WIDTH, y+HEIGHT, x + WIDTH/2, y, color);
     }
   }
 }

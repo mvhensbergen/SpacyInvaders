@@ -11,8 +11,8 @@ class Scores {
     void _set_highscore_from_EEPROM();
 
   public:
-    Scores() { 
-      _set_highscore_from_EEPROM(); 
+    Scores() {
+      _set_highscore_from_EEPROM();
     };
 
     void set_highscore(int score);
