@@ -17,9 +17,13 @@ class PowerUp: public Sprite {
     void deactivate();
 };
 
+
+// Activate powerup -> make it visible and also select a random powerup to be
 void PowerUp::activate() {
+  // Draw sprite
   inactive = false;
 
+  // Choose random powerup
   int r = random(0, MAX_POWERUPS);
 
   powerup_type = r;
@@ -28,7 +32,6 @@ void PowerUp::activate() {
 }
 
 void PowerUp::draw() {
-  // tft.drawRect(x,y, WIDTH, HEIGHT, WHITE);
   tft.fillCircle(x + POWERUP_RADIUS + 1, y+POWERUP_RADIUS, POWERUP_RADIUS  , color);
 }
 

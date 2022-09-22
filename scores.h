@@ -8,11 +8,11 @@
 class Scores {
   private:
     int highscore;
-    void _set_highscore_from_EEPROM();
+    void get_highscore_from_EEPROM();
 
   public:
     Scores() {
-      _set_highscore_from_EEPROM();
+      get_highscore_from_EEPROM();
     };
 
     void set_highscore(int score);
@@ -23,7 +23,7 @@ class Scores {
     }
 };
 
-void Scores::_set_highscore_from_EEPROM() {
+void Scores::get_highscore_from_EEPROM() {
   int r = EEPROM.read(ADDRESS);
   if ( r == 255)
     r = 0;
