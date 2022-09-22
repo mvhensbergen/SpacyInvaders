@@ -15,7 +15,7 @@
 
 #define HEIGHT 13
 #define WIDTH 13
-#define NORMAL_LASER_WIDTH 1
+#define NORMAL_LASER_WIDTH 3
 #define POWERUP_LASER_WIDTH 24
 #define HORIZONTAL 0
 #define VERTICAL 1
