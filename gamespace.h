@@ -138,7 +138,7 @@ void GameSpace::reset_state() {
   // Set spaceships in start position
   enemies_in_start_position(true);
 
-  player -> set_coordinates(160-10, 240-HEIGHT);
+  player -> set_coordinates(tft.width()/2-WIDTH/2, tft.height()-HEIGHT);
   player -> set_xspeed(10);
   player -> set_color(WHITE);
   player -> set_active();
