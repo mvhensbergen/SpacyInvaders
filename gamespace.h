@@ -331,7 +331,7 @@ void GameSpace::player_fire() {
 
   for (int i = 0; i < MAX_PLAYER_LASERS; i++ ) {
     if ( Lasers[i]->is_inactive()) {
-      Lasers[i] -> fire(player->posx() + WIDTH/2, player->posy() - HEIGHT);
+      Lasers[i] -> fire(player->posx() + WIDTH/2 - Lasers[i]->get_laser_width()/2, player->posy() - HEIGHT);
       last_fired = millis();
       return;
     }
