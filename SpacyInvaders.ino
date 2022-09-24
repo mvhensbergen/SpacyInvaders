@@ -40,6 +40,9 @@ MCUFRIEND_kbv tft;
 // Set to 1 to reset highscore
 #define CLEAR 0
 
+int joystickPin = A10;
+int firePin = A15;
+
 void setup(void) {
   Serial.begin(9600);
   Serial.println(F("TFT LCD test"));
@@ -59,6 +62,13 @@ void setup(void) {
     Scores s;
     s.set_highscore(0);
   }
+
+  // Supply power to the button and joystick
+  pinMode(52, OUTPUT);
+  digitalWrite(50, HIGH);
+  digitalWrite(52, HIGH);
+
+  pinMode(firePin, INPUT);
 }
 
 #define PLAYER_FIRE 0
@@ -103,6 +113,11 @@ void loop(void) {
   bool game_over = false;
 
   while (true) {
+    // Read position of player and redraw
+    int t = analogRead(joystickPin);
+    float xpos = (float) (1023-t)/1023 * (tft.width() - WIDTH);
+    g.position_player(xpos);
+
     should_redraw_hud = false;
     game_over = false;
 
@@ -121,19 +136,9 @@ void loop(void) {
       g.move_enemies();
     }
 
-    // react to player input
-    int action = read_input();
-    switch (action) {
-      case PLAYER_FIRE:
-        g.player_fire();
-        break;
-      case PLAYER_LEFT:
-        g.move_player(-1);
-        break;
-      case PLAYER_RIGHT:
-        g.move_player(1);
-        break;
-    }
+    int notfire = digitalRead(firePin);
+    if (!notfire)
+      g.player_fire();
     
     // move lasers
     g.move_lasers();    

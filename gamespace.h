@@ -62,6 +62,7 @@ class GameSpace {
     void hover_enemies();
     void move_enemies();
     void move_player(int direction);
+    void position_player(int xpos);
     void move_lasers();
 
     void set_xspeed();
@@ -132,14 +133,22 @@ GameSpace::GameSpace(MCUFRIEND_kbv t) {
   powerup_showing = false;
 }
 
+void GameSpace::position_player(int xxx) {
+  if ( xxx == player->posx())
+    return;
+  tft.fillRect(player->posx(),tft.height()-HEIGHT, WIDTH, HEIGHT, BLACK);
+  player -> set_coordinates(xxx, tft.height()-HEIGHT);
+  player -> move(HORIZONTAL);
+}
+
 void GameSpace::reset_state() {
   tft.fillScreen(BLACK);
 
   // Set spaceships in start position
   enemies_in_start_position(true);
 
-  player -> set_coordinates(tft.width()/2-WIDTH/2, tft.height()-HEIGHT);
-  player -> set_xspeed(10);
+  // player -> set_coordinates(tft.width()/2-WIDTH/2, tft.height()-HEIGHT);
+  player -> set_xspeed(0);
   player -> set_color(WHITE);
   player -> set_active();
   player -> move(HORIZONTAL);
