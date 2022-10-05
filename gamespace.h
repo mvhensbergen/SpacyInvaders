@@ -96,13 +96,14 @@ class GameSpace {
     void draw_hud();
 
     // aimbot functions
-    SpaceShip* get_nearest_enemy(SpaceShip* player);
+    SpaceShip* get_nearest_enemy();
     int get_spaceships_left_edge();
     int get_spaceships_right_edge();
 };
 
-SpaceShip* GameSpace::`get_nearest_enemy(SpaceShip* player) {
-  const int distance = tft.width() * tft.width() + tft.height() * tft.height();
+SpaceShip* GameSpace::get_nearest_enemy() {
+  const long maxdistance = tft.width() * tft.width() + tft.height() * tft.height();
+  long distance = maxdistance;
 
   SpaceShip* nearest_enemy = NULL;
 
@@ -111,10 +112,19 @@ SpaceShip* GameSpace::`get_nearest_enemy(SpaceShip* player) {
       if (enemies[i][row] -> is_inactive())
         continue;
 
-      xpos = enemies[i][row]->xpos();
-      ypos = enemies[i][row]->ypos();
+      long xposplayer = player->posx();
+      long yposplayer = player->posy();
 
-      int current_distance = xpos*xpos + ypos*ypos;
+      long xpos = enemies[i][row]->posx();
+      long ypos = enemies[i][row]->posy();
+
+      /*Serial.print(xposplayer); Serial.print(" ");
+      Serial.print(yposplayer); Serial.print(" ");
+      Serial.print(xpos);Serial.print(" ");
+      Serial.print(ypos);Serial.print(" ");*/
+
+      long current_distance = (xposplayer-xpos)*(xposplayer-xpos) + (yposplayer-ypos)*(yposplayer-ypos);
+      //Serial.println(current_distance);
       if (current_distance < distance) {
         distance = current_distance;
         nearest_enemy = enemies[i][row];
@@ -130,7 +140,7 @@ int GameSpace::get_spaceships_left_edge() {
     for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++) {
       if (enemies[i][row] -> is_inactive())
         continue;
-      xpos = min(xpos, enemies[i][row]->xpos());
+      xpos = min(xpos, enemies[i][row]->posx());
     }
   }
 }
@@ -141,7 +151,7 @@ int GameSpace::get_spaceships_right_edge() {
     for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++) {
       if (enemies[i][row] -> is_inactive())
         continue;
-      xpos = max(xpos, enemies[i][row]->xpos() + WIDTH);
+      xpos = max(xpos, enemies[i][row]->posx() + WIDTH);
     }
   }
 }
