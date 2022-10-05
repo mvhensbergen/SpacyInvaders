@@ -94,7 +94,58 @@ class GameSpace {
 
     // function to draw the hud
     void draw_hud();
+
+    // aimbot functions
+    SpaceShip* get_nearest_enemy(SpaceShip* player);
+    int get_spaceships_left_edge();
+    int get_spaceships_right_edge();
 };
+
+SpaceShip* GameSpace::`get_nearest_enemy(SpaceShip* player) {
+  const int distance = tft.width() * tft.width() + tft.height() * tft.height();
+
+  SpaceShip* nearest_enemy = NULL;
+
+  for ( int row = 0; row < MAX_ROWS; row++ ) {
+    for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++) {
+      if (enemies[i][row] -> is_inactive())
+        continue;
+
+      xpos = enemies[i][row]->xpos();
+      ypos = enemies[i][row]->ypos();
+
+      int current_distance = xpos*xpos + ypos*ypos;
+      if (current_distance < distance) {
+        distance = current_distance;
+        nearest_enemy = enemies[i][row];
+      }
+    }
+  }
+  return nearest_enemy;
+}
+
+int GameSpace::get_spaceships_left_edge() {
+  int xpos = tft.width();
+  for ( int row = 0; row < MAX_ROWS; row++ ) {
+    for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++) {
+      if (enemies[i][row] -> is_inactive())
+        continue;
+      xpos = min(xpos, enemies[i][row]->xpos());
+    }
+  }
+}
+
+int GameSpace::get_spaceships_right_edge() {
+  int xpos = 0;
+  for ( int row = 0; row < MAX_ROWS; row++ ) {
+    for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++) {
+      if (enemies[i][row] -> is_inactive())
+        continue;
+      xpos = max(xpos, enemies[i][row]->xpos() + WIDTH);
+    }
+  }
+}
+
 
 // Constructor - initialize all the elements of the board just once
 GameSpace::GameSpace(MCUFRIEND_kbv t) {
