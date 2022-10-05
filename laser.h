@@ -8,8 +8,6 @@
 
 class Laser : public Sprite {
   private:
-    int ydirection;
-    int yspeed;
     bool enemy = false;
     int laser_width;
 
@@ -69,3 +67,47 @@ void Laser::deactivate() {
   tft.fillRect(x,y, laser_width, HEIGHT, BLACK);
   //tft.drawFastVLine(x,y, HEIGHT, BLACK);
 }
+
+class AimbotLaser : public Laser {
+  private:
+    float xspeed;
+    float yspeed;
+  public:
+    AimbotLaser(MCUFRIEND_kbv t) : Laser(t) { Serial.println("INIT"); };
+    
+    void fire(int posx, int posy, float xs, float ys, int xd) {
+      inactive = false;
+      x = posx;
+      y = posy;
+      xspeed = xs;
+      yspeed = ys;
+      xdirection = xd; 
+      color = RED;
+
+      Serial.println("Fired!");
+      Serial.println(x);
+      Serial.println(y);
+
+      Serial.println(xspeed);
+      Serial.println(yspeed);
+
+      Serial.println(xdirection);
+
+      inactive = false;
+    };
+
+    void move() {
+      if (inactive)
+        return;
+
+      tft.fillRect(x,y, NORMAL_LASER_WIDTH, HEIGHT, BLACK);
+      x += xdirection * xspeed;
+      y += yspeed;
+      if ( y < HUD_OFFSET - HEIGHT  || y>= tft.height()) {
+          inactive = true;
+          return;
+      }
+      
+      tft.fillRect(x,y, NORMAL_LASER_WIDTH, HEIGHT, color);
+    }
+};

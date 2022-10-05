@@ -4,6 +4,7 @@
  *  Defines the class with the state of the entire game
  */
 
+#include "aimbot.h"
 #include "scores.h"
 
 class GameSpace {
@@ -12,6 +13,7 @@ class GameSpace {
     SpaceShip* player;  // player ship
     Laser* Lasers[MAX_PLAYER_LASERS];  // player lasers
     Laser* EnemyLasers[MAX_ENEMY_LASERS]; // enemy lasers
+    AimbotLaser* AimedLaser;
     PowerUp *powerup; // Powerup sprite
     Scores* score;
     int level;  // current level
@@ -99,7 +101,58 @@ class GameSpace {
     SpaceShip* get_nearest_enemy();
     int get_spaceships_left_edge();
     int get_spaceships_right_edge();
+    void aimbot();
 };
+
+void GameSpace::aimbot() {
+  SpaceShip* nearest = get_nearest_enemy();
+  if (!nearest) {
+    Serial.println("YUCK");
+    delay(5000);
+  }
+  int lborder = get_spaceships_left_edge();
+  int rborder = get_spaceships_right_edge();
+
+  //Serial.print("X, Y: ");
+  //Serial.print(nearest->posx()); Serial.print(" "); Serial.println(nearest->posy());
+  
+  AimBot aimbot(nearest->posx(), nearest->posy(), lborder, rborder, tft.width(), speed, nearest->xdirection);
+  
+  int laserx = player->posx() + WIDTH/2 - NORMAL_LASER_WIDTH/2;
+  int lasery = player->posy() - HEIGHT;
+
+  // This is the maximum amount of ticks before the laser has reached the enemy vertically
+  // if the enemy hasn't moved vertically
+  // This serves as an upperbound
+  int max_ticks = (lasery - nearest->posy())/AIMBOT_LASERSPEED;
+  //Serial.print("MT: "); Serial.println(max_ticks);
+  aimbot.advance_ticks(max_ticks);
+
+  //Serial.print("NX, NY:");
+  //Serial.print(aimbot.enemyx); Serial.print(" "); Serial.println(aimbot.enemyy);
+
+  if (AimedLaser -> is_inactive()) {
+      Serial.println("Fire Aimed");
+      float xspeed = (float)(aimbot.enemyx - player->posx());
+      xspeed = xspeed/(float) aimbot.max_ticks;
+      Serial.println(xspeed);
+      float yspeed = (float)(aimbot.enemyy - player->posy());
+      yspeed = yspeed/(float) aimbot.max_ticks;
+      Serial.println(yspeed);
+      int direction = 1;
+      if (aimbot.enemyx < player->posx()) {
+        direction = -1;
+      }
+      
+      AimedLaser -> fire(player->posx() + WIDTH/2 - NORMAL_LASER_WIDTH/2, 
+        player->posy() - HEIGHT,
+        xspeed,
+        yspeed,
+        direction);   
+    } else{
+      //Serial.println("X");
+    }
+}
 
 SpaceShip* GameSpace::get_nearest_enemy() {
   const long maxdistance = tft.width() * tft.width() + tft.height() * tft.height();
@@ -143,6 +196,8 @@ int GameSpace::get_spaceships_left_edge() {
       xpos = min(xpos, enemies[i][row]->posx());
     }
   }
+  return xpos;
+  //Serial.println("Left: "); Serial.println(xpos);
 }
 
 int GameSpace::get_spaceships_right_edge() {
@@ -154,6 +209,8 @@ int GameSpace::get_spaceships_right_edge() {
       xpos = max(xpos, enemies[i][row]->posx() + WIDTH);
     }
   }
+  return xpos;
+  //Serial.println("Right:"); Serial.println(xpos);
 }
 
 
@@ -188,6 +245,9 @@ GameSpace::GameSpace(MCUFRIEND_kbv t) {
     laser -> set_enemy();
     EnemyLasers[i] = laser;
   }
+  
+  AimedLaser = new AimbotLaser(tft);
+  Serial.println(AimedLaser -> is_inactive());
 
   active_powerup = NO_POWERUP;
   powerup_showing = false;
@@ -298,24 +358,32 @@ bool GameSpace::sprite_hit_by_laser(Sprite *enemy, Laser* laser) {
 bool GameSpace::check_hits() {
   bool hit = false;
 
-  for ( int i = 0; i < MAX_PLAYER_LASERS; i++) {
-    Laser* laser = Lasers[i];
-    if (laser -> is_inactive()) {
-      continue;
-    }
-
-    for ( int row = 0; row < MAX_ROWS; row++) {
-      for (int i =0 ; i < MAX_ENEMIES_PER_ROW; i++ ) {
-        SpaceShip *enemy = enemies[i][row];
-        if (enemy -> is_inactive()) {
-          continue;
-        }
-        if (sprite_hit_by_laser(enemy,laser) ) {
+  for ( int row = 0; row < MAX_ROWS; row++) {
+    for (int i =0 ; i < MAX_ENEMIES_PER_ROW; i++ ) {
+      SpaceShip *enemy = enemies[i][row];
+      if (enemy -> is_inactive()) {
+        continue;
+      }
+      
+      for ( int i = 0; i < MAX_PLAYER_LASERS; i++) {
+          Laser* laser = Lasers[i];
+          if (laser -> is_inactive()) {
+            continue;
+          }
+      
+        if (sprite_hit_by_laser(enemy,laser)) {
             enemy -> deactivate();
             laser -> deactivate();
             hit = true;
             active_enemies--;
           }
+      }
+      
+      if (sprite_hit_by_laser(enemy,AimedLaser)) {
+          enemy -> deactivate();
+          AimedLaser -> deactivate();
+          hit = true;
+          active_enemies--;
         }
       }
     }
@@ -375,6 +443,8 @@ void GameSpace::move_lasers() {
        EnemyLasers[l] -> move(VERTICAL);
      }
   }
+
+  AimedLaser->move();
 }
 
 // Fire a player laser from the players position
