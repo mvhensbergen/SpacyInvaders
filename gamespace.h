@@ -136,6 +136,8 @@ void GameSpace::aimbot() {
 
   tft.drawRect(aimbot.enemyx, aimbot.enemyy, WIDTH, HEIGHT, MAGENTA);
 
+  delay(2000);
+
   //Serial.print("NX, NY:");
   //Serial.print(aimbot.enemyx); Serial.print(" "); Serial.println(aimbot.enemyy);
 

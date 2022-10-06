@@ -21,7 +21,7 @@ class AimBot {
 
     AimBot (int x, int y, int l, int r, int w, int xs, int xd) {
       enemyx = x;
-      enemyy = y;
+      enemyy = y; 
 
       lborder = l;
       rborder = r;
@@ -46,7 +46,7 @@ class AimBot {
 
         if (lborder <= 0 || rborder >= screenwidth) {
           xdirection = -xdirection;
-          enemyy++;
+          enemyy+=SPACESHIP_VERTICAL_SPEED;
         }
         //delay(50);
       }
