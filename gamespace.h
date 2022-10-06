@@ -13,7 +13,11 @@ class GameSpace {
     SpaceShip* player;  // player ship
     Laser* Lasers[MAX_PLAYER_LASERS];  // player lasers
     Laser* EnemyLasers[MAX_ENEMY_LASERS]; // enemy lasers
+
     AimbotLaser* AimedLaser;
+    SpaceShip* AimbotTarget;
+    int AimbotTargetColor;
+
     PowerUp *powerup; // Powerup sprite
     Scores* score;
     int level;  // current level
@@ -102,63 +106,45 @@ class GameSpace {
     int get_spaceships_left_edge();
     int get_spaceships_right_edge();
     void aimbot();
+    void cleanup_aimbot();
 };
 
 void GameSpace::aimbot() {
   if (!(AimedLaser -> is_inactive())) {
     return;
   }
+  LocationPredictor predictor;
+  
   SpaceShip* nearest = get_nearest_enemy();
-  if (!nearest) {
-    Serial.println("YUCK");
-    delay(5000);
-  }
-
+  AimbotTarget = nearest;
   int lborder = get_spaceships_left_edge();
   int rborder = get_spaceships_right_edge();
-
-  LocationPredictor predictor;
-  predictor.init(nearest->posx(), nearest->posy(), lborder, rborder, tft.width(), speed, nearest->xdirection);
-  
   int laserx = player->posx() + WIDTH/2 - NORMAL_LASER_WIDTH/2;
   int lasery = player->posy() - HEIGHT;
 
-  int max_ticks = (lasery - nearest->posy())/AIMBOT_LASERSPEED;
-  predictor.advance_ticks(max_ticks);
-  tft.drawRect(predictor.enemyx, predictor.enemyy, WIDTH, HEIGHT, MAGENTA);
+  predictor.init(nearest->posx(), nearest->posy(), lborder, rborder, tft.width(), speed, nearest->xdirection);
+  int ticks = predictor.calculate_time_to_intercept(lasery);
+  if (SHOW_AIMBOT_BULLSEYE)
+    tft.drawRect(predictor.enemyx, predictor.enemyy, WIDTH, HEIGHT, GREEN);
+  
+  AimbotTargetColor = nearest->color;
 
-  //predictor.init(nearest->posx(), nearest->posy(), lborder, rborder, tft.width(), speed, nearest->xdirection);
-  //int ticks = predictor.calculate_time_to_intercept(lasery);
-  //Serial.println("time to intercept");
-  //Serial.println(ticks);
-  //predictor.advance_ticks(ticks);
-  //tft.drawRect(predictor.enemyx, predictor.enemyy, WIDTH, HEIGHT, GREEN);
+  nearest->set_color(WHITE);
+  float xspeed = (float) abs(predictor.enemyx + WIDTH/2 - laserx);
+  xspeed = xspeed/(float) ticks;
+  
+  int direction = 1;
+  if (predictor.enemyx < laserx)
+    direction = -1;
+  
+  AimedLaser -> fire(laserx, lasery, xspeed, direction);
+}
 
-  delay(2000);
-
-  if (AimedLaser -> is_inactive()) { // FIXME overbodig
-      //Serial.println("Fire Aimed");
-      nearest->set_color(WHITE);
-      float xspeed = (float) abs(predictor.enemyx + WIDTH/2 - laserx);
-      xspeed = xspeed/(float) max_ticks;
-      //Serial.println(xspeed);
-      //float yspeed = AIMBOT_LASERSPEED;
-      float yspeed = (float) abs(predictor.enemyy + HEIGHT - lasery);
-      yspeed = yspeed/(float) max_ticks;
-      //Serial.println(yspeed);
-      int direction = 1;
-      if (predictor.enemyx < laserx) {
-        direction = -1;
-      }
-      
-      AimedLaser -> fire(laserx, 
-        lasery,
-        xspeed,
-        yspeed,
-        direction);   
-    } else{
-      //Serial.println("X");
-    }
+void GameSpace::cleanup_aimbot() {
+  if ( AimedLaser->is_inactive() && AimbotTargetColor != -1 ) {
+    AimbotTarget -> set_color(AimbotTargetColor);
+    AimbotTargetColor = -1;
+  }
 }
 
 SpaceShip* GameSpace::get_nearest_enemy() {
@@ -246,8 +232,8 @@ GameSpace::GameSpace(MCUFRIEND_kbv t) {
   }
   
   AimedLaser = new AimbotLaser(tft);
-  Serial.println(AimedLaser -> is_inactive());
-
+  AimbotTargetColor = -1;
+ 
   active_powerup = NO_POWERUP;
   powerup_showing = false;
 }

@@ -75,23 +75,14 @@ class AimbotLaser : public Laser {
   public:
     AimbotLaser(MCUFRIEND_kbv t) : Laser(t) { Serial.println("INIT"); };
     
-    void fire(int posx, int posy, float xs, float ys, int xd) {
+    void fire(int posx, int posy, float xs, int xd) {
       inactive = false;
       x = posx;
       y = posy;
       xspeed = xs;
-      yspeed = ys;
+      yspeed = AIMBOT_LASERSPEED;
       xdirection = xd; 
       color = RED;
-
-      Serial.println("Fired!");
-      Serial.println(x);
-      Serial.println(y);
-
-      Serial.println(xspeed);
-      Serial.println(yspeed);
-
-      Serial.println(xdirection);
 
       inactive = false;
     };
@@ -99,11 +90,6 @@ class AimbotLaser : public Laser {
     void move() {
       if (inactive)
         return;
-
-      //Serial.println("-");
-      //Serial.println(xspeed);
-      //Serial.println(xdirection);
-      //Serial.println(x);
 
       tft.fillRect(x,y, NORMAL_LASER_WIDTH, HEIGHT, BLACK);
 
