@@ -100,9 +100,15 @@ class AimbotLaser : public Laser {
       if (inactive)
         return;
 
+      //Serial.println("-");
+      //Serial.println(xspeed);
+      //Serial.println(xdirection);
+      //Serial.println(x);
+
       tft.fillRect(x,y, NORMAL_LASER_WIDTH, HEIGHT, BLACK);
-      x += xdirection * xspeed;
-      y += yspeed;
+
+      x += (float) xdirection * (float) xspeed;
+      y -= yspeed;
       if ( y < HUD_OFFSET - HEIGHT  || y>= tft.height()) {
           inactive = true;
           return;

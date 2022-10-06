@@ -111,7 +111,7 @@ void loop(void) {
 
     g.aimbot();
     
-    delay(50);
+    //delay(50);
     
     // If a powerup is in progress, handle it
     if ( g.current_powerup() != NO_POWERUP) {

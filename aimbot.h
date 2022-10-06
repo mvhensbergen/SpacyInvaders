@@ -40,14 +40,14 @@ class AimBot {
         Serial.println(screenwidth); 
         Serial.print(xdirection);Serial.print(" "); Serial.println(xspeed);
         */
-        
+        enemyx += xdirection * xspeed;
+        lborder += xdirection * xspeed;
+        rborder += xdirection * xspeed;
+
         if (lborder <= 0 || rborder >= screenwidth) {
           xdirection = -xdirection;
           enemyy++;
         }
-        enemyx += xdirection * xspeed;
-        lborder += xdirection * xspeed;
-        rborder += xdirection * xspeed;
         //delay(50);
       }
     }

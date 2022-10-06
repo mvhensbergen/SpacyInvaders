@@ -20,7 +20,7 @@
 #define HORIZONTAL 0
 #define VERTICAL 1
 
-#define AIMBOT_LASERSPEED  1;
+#define AIMBOT_LASERSPEED  3;
 
 #define HUD_OFFSET 24
 

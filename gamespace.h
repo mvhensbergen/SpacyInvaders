@@ -105,11 +105,17 @@ class GameSpace {
 };
 
 void GameSpace::aimbot() {
+  if (!(AimedLaser -> is_inactive())) {
+    return;
+  }
   SpaceShip* nearest = get_nearest_enemy();
   if (!nearest) {
     Serial.println("YUCK");
     delay(5000);
   }
+
+  tft.drawRect(nearest->posx(), nearest->posy(), WIDTH, HEIGHT, WHITE);
+  
   int lborder = get_spaceships_left_edge();
   int rborder = get_spaceships_right_edge();
 
@@ -128,24 +134,27 @@ void GameSpace::aimbot() {
   //Serial.print("MT: "); Serial.println(max_ticks);
   aimbot.advance_ticks(max_ticks);
 
+  tft.drawRect(aimbot.enemyx, aimbot.enemyy, WIDTH, HEIGHT, MAGENTA);
+
   //Serial.print("NX, NY:");
   //Serial.print(aimbot.enemyx); Serial.print(" "); Serial.println(aimbot.enemyy);
 
   if (AimedLaser -> is_inactive()) {
-      Serial.println("Fire Aimed");
-      float xspeed = (float)(aimbot.enemyx - player->posx());
+      //Serial.println("Fire Aimed");
+      nearest->set_color(WHITE);
+      float xspeed = (float) abs(aimbot.enemyx + WIDTH/2 - laserx);
       xspeed = xspeed/(float) aimbot.max_ticks;
-      Serial.println(xspeed);
-      float yspeed = (float)(aimbot.enemyy - player->posy());
+      //Serial.println(xspeed);
+      float yspeed = (float) abs(aimbot.enemyy + HEIGHT - lasery);
       yspeed = yspeed/(float) aimbot.max_ticks;
-      Serial.println(yspeed);
+      //Serial.println(yspeed);
       int direction = 1;
-      if (aimbot.enemyx < player->posx()) {
+      if (aimbot.enemyx < laserx) {
         direction = -1;
       }
       
-      AimedLaser -> fire(player->posx() + WIDTH/2 - NORMAL_LASER_WIDTH/2, 
-        player->posy() - HEIGHT,
+      AimedLaser -> fire(laserx, 
+        lasery,
         xspeed,
         yspeed,
         direction);   
@@ -278,6 +287,8 @@ void GameSpace::reset_state() {
     EnemyLasers[i] -> deactivate();
     EnemyLasers[i] -> set_width(NORMAL_LASER_WIDTH);
   }
+
+  AimedLaser->deactivate();
 
   // turn off powerup
   powerup -> deactivate();
