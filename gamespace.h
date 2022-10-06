@@ -4,7 +4,7 @@
  *  Defines the class with the state of the entire game
  */
 
-#include "aimbot.h"
+#include "spaceshiplocationpredictor.h"
 #include "scores.h"
 
 class GameSpace {
@@ -114,44 +114,40 @@ void GameSpace::aimbot() {
     delay(5000);
   }
 
-  tft.drawRect(nearest->posx(), nearest->posy(), WIDTH, HEIGHT, WHITE);
-  
   int lborder = get_spaceships_left_edge();
   int rborder = get_spaceships_right_edge();
 
-  //Serial.print("X, Y: ");
-  //Serial.print(nearest->posx()); Serial.print(" "); Serial.println(nearest->posy());
-  
-  AimBot aimbot(nearest->posx(), nearest->posy(), lborder, rborder, tft.width(), speed, nearest->xdirection);
+  LocationPredictor predictor;
+  predictor.init(nearest->posx(), nearest->posy(), lborder, rborder, tft.width(), speed, nearest->xdirection);
   
   int laserx = player->posx() + WIDTH/2 - NORMAL_LASER_WIDTH/2;
   int lasery = player->posy() - HEIGHT;
 
-  // This is the maximum amount of ticks before the laser has reached the enemy vertically
-  // if the enemy hasn't moved vertically
-  // This serves as an upperbound
   int max_ticks = (lasery - nearest->posy())/AIMBOT_LASERSPEED;
-  //Serial.print("MT: "); Serial.println(max_ticks);
-  aimbot.advance_ticks(max_ticks);
+  predictor.advance_ticks(max_ticks);
+  tft.drawRect(predictor.enemyx, predictor.enemyy, WIDTH, HEIGHT, MAGENTA);
 
-  tft.drawRect(aimbot.enemyx, aimbot.enemyy, WIDTH, HEIGHT, MAGENTA);
+  //predictor.init(nearest->posx(), nearest->posy(), lborder, rborder, tft.width(), speed, nearest->xdirection);
+  //int ticks = predictor.calculate_time_to_intercept(lasery);
+  //Serial.println("time to intercept");
+  //Serial.println(ticks);
+  //predictor.advance_ticks(ticks);
+  //tft.drawRect(predictor.enemyx, predictor.enemyy, WIDTH, HEIGHT, GREEN);
 
   delay(2000);
 
-  //Serial.print("NX, NY:");
-  //Serial.print(aimbot.enemyx); Serial.print(" "); Serial.println(aimbot.enemyy);
-
-  if (AimedLaser -> is_inactive()) {
+  if (AimedLaser -> is_inactive()) { // FIXME overbodig
       //Serial.println("Fire Aimed");
       nearest->set_color(WHITE);
-      float xspeed = (float) abs(aimbot.enemyx + WIDTH/2 - laserx);
-      xspeed = xspeed/(float) aimbot.max_ticks;
+      float xspeed = (float) abs(predictor.enemyx + WIDTH/2 - laserx);
+      xspeed = xspeed/(float) max_ticks;
       //Serial.println(xspeed);
-      float yspeed = (float) abs(aimbot.enemyy + HEIGHT - lasery);
-      yspeed = yspeed/(float) aimbot.max_ticks;
+      //float yspeed = AIMBOT_LASERSPEED;
+      float yspeed = (float) abs(predictor.enemyy + HEIGHT - lasery);
+      yspeed = yspeed/(float) max_ticks;
       //Serial.println(yspeed);
       int direction = 1;
-      if (aimbot.enemyx < laserx) {
+      if (predictor.enemyx < laserx) {
         direction = -1;
       }
       
@@ -166,9 +162,9 @@ void GameSpace::aimbot() {
 }
 
 SpaceShip* GameSpace::get_nearest_enemy() {
-  const long maxdistance = tft.width() * tft.width() + tft.height() * tft.height();
+  const long maxdistance = (long) tft.width() * (long) tft.width() + (long) tft.height() * (long) tft.height();
   long distance = maxdistance;
-
+  
   SpaceShip* nearest_enemy = NULL;
 
   for ( int row = 0; row < MAX_ROWS; row++ ) {
@@ -182,13 +178,7 @@ SpaceShip* GameSpace::get_nearest_enemy() {
       long xpos = enemies[i][row]->posx();
       long ypos = enemies[i][row]->posy();
 
-      /*Serial.print(xposplayer); Serial.print(" ");
-      Serial.print(yposplayer); Serial.print(" ");
-      Serial.print(xpos);Serial.print(" ");
-      Serial.print(ypos);Serial.print(" ");*/
-
       long current_distance = (xposplayer-xpos)*(xposplayer-xpos) + (yposplayer-ypos)*(yposplayer-ypos);
-      //Serial.println(current_distance);
       if (current_distance < distance) {
         distance = current_distance;
         nearest_enemy = enemies[i][row];
@@ -208,7 +198,6 @@ int GameSpace::get_spaceships_left_edge() {
     }
   }
   return xpos;
-  //Serial.println("Left: "); Serial.println(xpos);
 }
 
 int GameSpace::get_spaceships_right_edge() {
@@ -221,7 +210,6 @@ int GameSpace::get_spaceships_right_edge() {
     }
   }
   return xpos;
-  //Serial.println("Right:"); Serial.println(xpos);
 }
 
 
