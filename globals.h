@@ -20,6 +20,11 @@
 #define HORIZONTAL 0
 #define VERTICAL 1
 
+#define LASER_SPEED 10;
+#define AIMBOT_LASERSPEED 4
+#define SHOW_AIMBOT_BULLSEYE 0
+#define AIMBOT_ALWAYS_ON 0
+
 #define HUD_OFFSET 24
 
 #define SPACESHIP_VERTICAL_SPEED 6
@@ -46,11 +51,13 @@
 #define RAPID_FIRE_POWERUP 4
 // Player laser widens
 #define WIDE_LASER_POWERUP 5
+// Aimbot
+#define AIMBOT_POWERUP 6
 
-#define MAX_POWERUPS 6
+#define MAX_POWERUPS 7
 
 
-const char* powerups[7] = { "HOVER", "RESET", "KILL", "NO FIRE", "RAPID FIRE", "WIDE LASER"}; 
+const char* powerups[8] = { "HOVER", "RESET", "KILL", "NO FIRE", "RAPID FIRE", "WIDE LASER", "AIMBOT"}; 
 
 // The flashy colors of player's lasers
-unsigned int colors[7] = { RED, GREEN, BLUE, YELLOW, MAGENTA, CYAN, WHITE };
+unsigned int colors[8] = { RED, GREEN, BLUE, YELLOW, MAGENTA, CYAN, WHITE};

@@ -108,6 +108,10 @@ void loop(void) {
 
     // Handle whether a powerup should be shown or if it should be erased
     g.do_powerup();
+
+    g.cleanup_aimbot();
+    if (AIMBOT_ALWAYS_ON || g.current_powerup() == AIMBOT_POWERUP)
+      g.aimbot();
     
     // If a powerup is in progress, handle it
     if ( g.current_powerup() != NO_POWERUP) {
