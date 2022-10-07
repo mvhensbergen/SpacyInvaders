@@ -382,12 +382,13 @@ bool GameSpace::check_hits() {
             active_enemies--;
           }
       }
-      
-      if (sprite_hit_by_laser(enemy,AimedLaser)) {
-          enemy -> deactivate();
-          AimedLaser -> deactivate();
-          hit = true;
-          active_enemies--;
+      if (!(AimedLaser -> is_inactive())) {
+        if (sprite_hit_by_laser(enemy,AimedLaser)) {
+            enemy -> deactivate();
+            AimedLaser -> deactivate();
+            hit = true;
+            active_enemies--;
+          }
         }
       }
     }
@@ -606,6 +607,12 @@ void GameSpace::handle_active_powerup() {
       }
       break;
     case(RAPID_FIRE_POWERUP):
+      if (millis() - powerup_active_start > POWERUP_DURATION) {
+        active_powerup = NO_POWERUP;
+        draw_hud();
+      }
+      break;
+    case(AIMBOT_POWERUP):
       if (millis() - powerup_active_start > POWERUP_DURATION) {
         active_powerup = NO_POWERUP;
         draw_hud();
