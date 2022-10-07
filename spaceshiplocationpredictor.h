@@ -4,7 +4,7 @@
  *  and direction and the screens width.
  *
  *  The method calculate_time_to_intercept can be used to measure the time it takes for a laser
- *  to be able to reach the y-ordinate of an enemy, which can be used to calculate the necessary
+ *  to reach the y-ordinate of an enemy, which can be used to calculate the necessary
  *  horizontal velocity of the aimbot laser
  */
 class LocationPredictor {
