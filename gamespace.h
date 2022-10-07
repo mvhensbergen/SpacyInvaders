@@ -14,9 +14,9 @@ class GameSpace {
     Laser* Lasers[MAX_PLAYER_LASERS];  // player lasers
     Laser* EnemyLasers[MAX_ENEMY_LASERS]; // enemy lasers
 
-    AimbotLaser* AimedLaser;
-    SpaceShip* AimbotTarget;
-    int AimbotTargetColor;
+    AimbotLaser* AimedLaser;  // aimbot laser for aimbot powerup
+    SpaceShip* AimbotTarget;  // pointer to the target of the aimbot
+    int AimbotTargetColor;    // original color of the aimbot target
 
     PowerUp *powerup; // Powerup sprite
     Scores* score;
@@ -109,44 +109,58 @@ class GameSpace {
     void cleanup_aimbot();
 };
 
+
+// Use aimbot to fire a laser which is almost certain to hit the current nearest enemy
 void GameSpace::aimbot() {
+  // There is already an aimbot lser fired
   if (!(AimedLaser -> is_inactive())) {
     return;
   }
   LocationPredictor predictor;
-  
+
+  // Get the nearest enemy from players position
   SpaceShip* nearest = get_nearest_enemy();
   AimbotTarget = nearest;
+  AimbotTargetColor = nearest->color;
+
+  // Calculated necessary values for the locationpredictor
   int lborder = get_spaceships_left_edge();
   int rborder = get_spaceships_right_edge();
   int laserx = player->posx() + WIDTH/2 - NORMAL_LASER_WIDTH/2;
   int lasery = player->posy() - HEIGHT;
 
+  // Calculate time to vertical intercept
   predictor.init(nearest->posx(), nearest->posy(), lborder, rborder, tft.width(), speed, nearest->xdirection);
   int ticks = predictor.calculate_time_to_intercept(lasery);
   if (SHOW_AIMBOT_BULLSEYE)
     tft.drawRect(predictor.enemyx, predictor.enemyy, WIDTH, HEIGHT, GREEN);
-  
-  AimbotTargetColor = nearest->color;
 
+  // Turn the aimbot target white
   nearest->set_color(WHITE);
+
+  // Calculate horizontal speed and direction for the laser to reach the predicted location
   float xspeed = (float) abs(predictor.enemyx + WIDTH/2 - laserx);
   xspeed = xspeed/(float) ticks;
   
   int direction = 1;
   if (predictor.enemyx < laserx)
     direction = -1;
-  
+
+  // Fire!
   AimedLaser -> fire(laserx, lasery, xspeed, direction);
 }
 
+// Always be prepared to cleanup the aimbot
 void GameSpace::cleanup_aimbot() {
+  // If the aimbot laser is not active but we still have a copy of the original color of the target,
+  // restore the enemies color to normal
   if ( AimedLaser->is_inactive() && AimbotTargetColor != -1 ) {
     AimbotTarget -> set_color(AimbotTargetColor);
     AimbotTargetColor = -1;
   }
 }
 
+// Use the norm x^2+y^2 to calculate distance to each enemy and find minimum
 SpaceShip* GameSpace::get_nearest_enemy() {
   const long maxdistance = (long) tft.width() * (long) tft.width() + (long) tft.height() * (long) tft.height();
   long distance = maxdistance;
@@ -155,25 +169,27 @@ SpaceShip* GameSpace::get_nearest_enemy() {
 
   for ( int row = 0; row < MAX_ROWS; row++ ) {
     for ( int i = 0; i < MAX_ENEMIES_PER_ROW; i++) {
-      if (enemies[i][row] -> is_inactive())
+      SpaceShip* enemy = enemies[i][row];
+      if (enemy -> is_inactive())
         continue;
 
       long xposplayer = player->posx();
       long yposplayer = player->posy();
 
-      long xpos = enemies[i][row]->posx();
-      long ypos = enemies[i][row]->posy();
+      long xpos = enemy->posx();
+      long ypos = enemy->posy();
 
       long current_distance = (xposplayer-xpos)*(xposplayer-xpos) + (yposplayer-ypos)*(yposplayer-ypos);
       if (current_distance < distance) {
         distance = current_distance;
-        nearest_enemy = enemies[i][row];
+        nearest_enemy = enemy;
       }
     }
   }
   return nearest_enemy;
 }
 
+// Get the x-oordinate of the leftmost enemy
 int GameSpace::get_spaceships_left_edge() {
   int xpos = tft.width();
   for ( int row = 0; row < MAX_ROWS; row++ ) {
@@ -186,6 +202,7 @@ int GameSpace::get_spaceships_left_edge() {
   return xpos;
 }
 
+// Get the x-oordinate of the rightmost enemy
 int GameSpace::get_spaceships_right_edge() {
   int xpos = 0;
   for ( int row = 0; row < MAX_ROWS; row++ ) {

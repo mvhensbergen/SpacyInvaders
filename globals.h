@@ -22,6 +22,7 @@
 
 #define LASER_SPEED 10;
 #define AIMBOT_LASERSPEED 4;
+#define SHOW_AIMBOT_BULLSEYE 0
 
 #define HUD_OFFSET 24
 
@@ -51,7 +52,6 @@
 #define WIDE_LASER_POWERUP 5
 
 #define MAX_POWERUPS 6
-#define SHOW_AIMBOT_BULLSEYE 1
 
 
 const char* powerups[7] = { "HOVER", "RESET", "KILL", "NO FIRE", "RAPID FIRE", "WIDE LASER"}; 

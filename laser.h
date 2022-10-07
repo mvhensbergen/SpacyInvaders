@@ -71,9 +71,8 @@ void Laser::deactivate() {
 class AimbotLaser : public Laser {
   private:
     float xspeed;
-    float yspeed;
   public:
-    AimbotLaser(MCUFRIEND_kbv t) : Laser(t) { Serial.println("INIT"); };
+    AimbotLaser(MCUFRIEND_kbv t) : Laser(t) {};
     
     void fire(int posx, int posy, float xs, int xd) {
       inactive = false;
@@ -83,8 +82,6 @@ class AimbotLaser : public Laser {
       yspeed = AIMBOT_LASERSPEED;
       xdirection = xd; 
       color = RED;
-
-      inactive = false;
     };
 
     void move() {

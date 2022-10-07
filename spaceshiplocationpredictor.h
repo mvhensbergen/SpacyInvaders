@@ -1,20 +1,22 @@
-//
-//
-// |  x      x  |
-// |      p     |
-// |            |
-//
-
+/*
+ *  This class is used for the aimbot and can predict the location of an enemy in time
+ *  based on: current location of enemy, the x-ordinates of the outmost enemies, their speed
+ *  and direction and the screens width.
+ *
+ *  The method calculate_time_to_intercept can be used to measure the time it takes for a laser
+ *  to be able to reach the y-ordinate of an enemy, which can be used to calculate the necessary
+ *  horizontal velocity of the aimbot laser
+ */
 class LocationPredictor {
   public:
-    int enemyx;
+    int enemyx; // Coordinates of the enemy
     int enemyy;
 
-    int lborder;
+    int lborder;  // The x-ordinates of the leftmost and rightmost enemy
     int rborder;
     int screenwidth;
 
-    int xspeed;
+    int xspeed; // Current speed and riection of enemy
     int xdirection;
 
     LocationPredictor () {};
@@ -30,6 +32,7 @@ class LocationPredictor {
       xdirection = xd;
     }
 
+    // Calculate the position of the enemy after one time unit has passed
     advance_tick() {
       enemyx += xdirection * xspeed;
       lborder += xdirection * xspeed;
@@ -41,18 +44,13 @@ class LocationPredictor {
       }
     }
 
-    advance_ticks(int ticks) {
-      for ( int i = 0; i < ticks; i++ ) {
-        advance_tick();
-      }
-    }
-
-    int calculate_time_to_intercept(int y) {
+    // Calculate how lont it takes for the aimbot laser to reach the moving enemy vertically
+    int calculate_time_to_intercept(int lasery) {
       int ticks = 0;
-      while (enemyy + HEIGHT < y) {
+      while (enemyy + HEIGHT < lasery) {
         ticks++;
         advance_tick();
-        y -= AIMBOT_LASERSPEED;
+        lasery -= AIMBOT_LASERSPEED;
       }
       return ticks;
     }
