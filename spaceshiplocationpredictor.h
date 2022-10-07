@@ -16,7 +16,7 @@ class LocationPredictor {
     int rborder;
     int screenwidth;
 
-    int xspeed; // Current speed and riection of enemy
+    int xspeed; // Current speed and direction of enemy
     int xdirection;
 
     LocationPredictor () {};
@@ -44,7 +44,7 @@ class LocationPredictor {
       }
     }
 
-    // Calculate how lont it takes for the aimbot laser to reach the moving enemy vertically
+    // Calculate how long it takes for the aimbot laser to reach the moving enemy vertically
     int calculate_time_to_intercept(int lasery) {
       int ticks = 0;
       while (enemyy + HEIGHT < lasery) {
