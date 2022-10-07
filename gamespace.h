@@ -112,7 +112,7 @@ class GameSpace {
 
 // Use aimbot to fire a laser which is almost certain to hit the current nearest enemy
 void GameSpace::aimbot() {
-  // There is already an aimbot lser fired
+  // There is already an aimbot active so do nothing
   if (!(AimedLaser -> is_inactive())) {
     return;
   }
@@ -123,7 +123,7 @@ void GameSpace::aimbot() {
   AimbotTarget = nearest;
   AimbotTargetColor = nearest->color;
 
-  // Calculated necessary values for the locationpredictor
+  // Calculate necessary values for the locationpredictor
   int lborder = get_spaceships_left_edge();
   int rborder = get_spaceships_right_edge();
   int laserx = player->posx() + WIDTH/2 - NORMAL_LASER_WIDTH/2;
